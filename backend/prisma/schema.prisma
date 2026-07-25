@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RoleType {
+  SUPER_ADMIN
+  STATE_ADMIN
+  DISTRICT_ADMIN
+  MUNICIPAL_ADMIN
+  DEPARTMENT_HEAD
+  OFFICER
+  CITIZEN
+}
+
+enum ComplaintStatus {
+  PENDING
+  UNDER_REVIEW
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+  CLOSED
+}
+
+enum ComplaintPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        RoleType @unique
+  description String?
+
+  users User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id           String  @id @default(uuid())
+  fullName     String
+  email        String  @unique
+  phone        String  @unique
+  password     String
+
+  isVerified   Boolean @default(false)
+  isActive     Boolean @default(true)
+
+  roleId String
+  role   Role @relation(fields: [roleId], references: [id])
+
+  complaintsCreated Complaint[] @relation("ComplaintCreator")
+  complaintsAssigned Complaint[] @relation("ComplaintAssignee")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Department {
+  id          String @id @default(uuid())
+  name        String @unique
+  description String?
+  isActive    Boolean @default(true)
+
+  complaints Complaint[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Complaint {
+  id          String @id @default(uuid())
+
+  title       String
+  description String
+
+  status   ComplaintStatus   @default(PENDING)
+  priority ComplaintPriority @default(MEDIUM)
+
+  createdById String
+  createdBy User @relation("ComplaintCreator", fields: [createdById], references: [id])
+
+  assignedOfficerId String?
+  assignedOfficer User? @relation("ComplaintAssignee", fields: [assignedOfficerId], references: [id])
+
+  departmentId String
+  department Department @relation(fields: [departmentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
