@@ -19,26 +19,31 @@ An AI-powered, multi-tenant civic grievance management platform that enables cit
 ## 🛠 Tech Stack
 
 ### Frontend
+
 - React
 - TypeScript
 - Vite
 - Tailwind CSS
 
 ### Backend
+
 - Node.js
 - Express.js
 - TypeScript
 
 ### Database
+
 - PostgreSQL
 - Prisma ORM
 
 ### Authentication
+
 - JWT
 - Refresh Tokens
 - bcrypt
 
 ### Storage & Services
+
 - Cloudinary
 - Leaflet + OpenStreetMap
 - Gemini AI
