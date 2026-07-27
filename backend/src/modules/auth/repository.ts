@@ -1,0 +1,51 @@
+import { RoleType } from "@prisma/client";
+
+import { prisma } from "../../lib/prisma.js";
+import { RegisterUserInput } from "./types.js";
+
+export async function findUserByEmail(email: string) {
+  return prisma.user.findUnique({
+    where: { email },
+  });
+}
+
+export async function findUserByPhone(phone: string) {
+  return prisma.user.findUnique({
+    where: { phone },
+  });
+}
+
+export async function findRoleByName(role: RoleType) {
+  return prisma.role.findUnique({
+    where: { name: role },
+  });
+}
+
+export async function createUser(
+  data: Omit<RegisterUserInput, "password"> & {
+    passwordHash: string;
+    roleId: string;
+  }
+) {
+  return prisma.user.create({
+    data: {
+      fullName: data.fullName,
+      email: data.email,
+      phone: data.phone,
+      passwordHash: data.passwordHash,
+      roleId: data.roleId,
+    },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      role: {
+        select: {
+          name: true,
+        },
+      },
+      createdAt: true,
+    },
+  });
+}
