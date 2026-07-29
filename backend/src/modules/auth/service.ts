@@ -4,7 +4,9 @@ import { hashPassword } from "../../utils/password.js";
 
 import { createUser, findRoleByName, findUserByEmail, findUserByPhone } from "./repository.js";
 import { RegisterUserInput } from "./types.js";
-
+import { comparePassword } from "../../utils/password.js";
+import { generateAccessToken } from "../../config/jwt.js";
+import { LoginUserInput } from "./types.js";
 export async function registerUser(data: RegisterUserInput) {
   const existingEmail = await findUserByEmail(data.email);
 
@@ -33,4 +35,38 @@ export async function registerUser(data: RegisterUserInput) {
     passwordHash,
     roleId: citizenRole.id,
   });
+}
+export async function loginUser(data: LoginUserInput) {
+  const user = await findUserByEmail(data.email);
+
+  if (!user) {
+    throw new ApiError(401, "Invalid email or password.");
+  }
+
+  if (!user.isActive) {
+    throw new ApiError(403, "Your account has been deactivated.");
+  }
+
+  const isPasswordValid = await comparePassword(data.password, user.passwordHash);
+
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid email or password.");
+  }
+
+  const accessToken = generateAccessToken({
+    userId: user.id,
+    role: user.role.name,
+  });
+
+  return {
+    accessToken,
+    user: {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      role: user.role.name,
+      isVerified: user.isVerified,
+    },
+  };
 }

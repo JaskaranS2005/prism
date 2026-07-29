@@ -1,0 +1,34 @@
+import { NextFunction, Request, Response } from "express";
+import ApiError from "../utils/ApiError.js";
+import { verifyAccessToken } from "../config/jwt.js";
+import { findUserById } from "../modules/auth/repository.js";
+
+export async function authenticate(req: Request, _res: Response, next: NextFunction) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new ApiError(401, "Authentication required.");
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const payload = verifyAccessToken(token);
+
+    const user = await findUserById(payload.userId);
+
+    if (!user) {
+      throw new ApiError(401, "User not found.");
+    }
+
+    if (!user.isActive) {
+      throw new ApiError(403, "Account is deactivated.");
+    }
+
+    req.user = user;
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+}

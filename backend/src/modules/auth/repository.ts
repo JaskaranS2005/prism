@@ -5,7 +5,23 @@ import { RegisterUserInput } from "./types.js";
 
 export async function findUserByEmail(email: string) {
   return prisma.user.findUnique({
-    where: { email },
+    where: {
+      email,
+    },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      passwordHash: true,
+      role: {
+        select: {
+          name: true,
+        },
+      },
+      isActive: true,
+      isVerified: true,
+    },
   });
 }
 
@@ -18,6 +34,25 @@ export async function findUserByPhone(phone: string) {
 export async function findRoleByName(role: RoleType) {
   return prisma.role.findUnique({
     where: { name: role },
+  });
+}
+
+export async function findUserById(id: string) {
+  return prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      isActive: true,
+      isVerified: true,
+      role: {
+        select: {
+          name: true,
+        },
+      },
+    },
   });
 }
 
