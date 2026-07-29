@@ -1,6 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-
-import { ApiResponse } from "../../utils/apiResponse.js";
+import { ApiResponse } from "../../utils/ResponseWrapper.js";
 import { loginUser, registerUser } from "./service.js";
 import { loginUserSchema, registerUserSchema } from "./validation.js";
 
