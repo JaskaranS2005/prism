@@ -54,3 +54,12 @@ export async function findComplaintsByUserId(userId: string) {
     },
   });
 }
+export async function findComplaintById(id: string) {
+  return prisma.complaint.findUnique({
+    where: { id },
+    include: {
+      department: true,
+      assignedOfficer: true,
+    },
+  });
+}
