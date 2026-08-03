@@ -1,13 +1,15 @@
 import ApiError from "../../utils/ApiError.js";
 
 import {
+  assignComplaint,
   createComplaint,
   findComplaintById,
   findComplaintsByUserId,
   findDepartmentById,
+  findUserById,
 } from "./repository.js";
 
-import { CreateComplaintInput } from "./types.js";
+import { AssignComplaintInput, CreateComplaintInput } from "./types.js";
 
 export async function createComplaintService(userId: string, data: CreateComplaintInput) {
   const department = await findDepartmentById(data.departmentId);
@@ -26,14 +28,7 @@ export async function getMyComplaintsService(userId: string) {
 }
 
 export async function getComplaintByIdService(complaintId: string, userId: string) {
-  console.log("========== SERVICE ==========");
-  console.log("Complaint ID:", complaintId);
-  console.log("User ID:", userId);
-
   const complaint = await findComplaintById(complaintId);
-
-  console.log("Complaint from DB:");
-  console.log(complaint);
 
   if (!complaint) {
     throw new ApiError(404, "Complaint not found.");
@@ -46,4 +41,24 @@ export async function getComplaintByIdService(complaintId: string, userId: strin
   console.log("Authorization successful.");
 
   return complaint;
+}
+
+export async function assignComplaintService(complaintId: string, data: AssignComplaintInput) {
+  const complaint = await findComplaintById(complaintId);
+
+  if (!complaint) {
+    throw new ApiError(404, "Complaint not found.");
+  }
+
+  const officer = await findUserById(data.officerId);
+
+  if (!officer) {
+    throw new ApiError(404, "Officer not found.");
+  }
+
+  if (officer.role.name !== "OFFICER") {
+    throw new ApiError(400, "Selected user is not an officer.");
+  }
+
+  return assignComplaint(complaintId, data.officerId);
 }

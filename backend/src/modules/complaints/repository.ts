@@ -63,3 +63,47 @@ export async function findComplaintById(id: string) {
     },
   });
 }
+export async function findUserById(userId: string) {
+  return prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    include: {
+      role: true,
+    },
+  });
+}
+
+export async function assignComplaint(complaintId: string, officerId: string) {
+  return prisma.complaint.update({
+    where: {
+      id: complaintId,
+    },
+    data: {
+      assignedOfficerId: officerId,
+    },
+    include: {
+      department: true,
+      assignedOfficer: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+        },
+      },
+    },
+  });
+}
+
+export async function findComplaintByIdWithRelations(complaintId: string) {
+  return prisma.complaint.findUnique({
+    where: {
+      id: complaintId,
+    },
+    include: {
+      department: true,
+      assignedOfficer: true,
+      createdBy: true,
+    },
+  });
+}

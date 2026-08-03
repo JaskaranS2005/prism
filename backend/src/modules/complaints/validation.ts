@@ -7,3 +7,7 @@ export const createComplaintSchema = z.object({
 
   departmentId: z.uuid(),
 });
+
+export const assignComplaintSchema = z.object({
+  officerId: z.uuid(),
+});

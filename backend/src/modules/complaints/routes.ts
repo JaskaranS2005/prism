@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { authenticate } from "../../middleware/auth.middleware.js";
-import { createComplaint, getMyComplaints, getComplaintById } from "./controller.js";
+import {
+  createComplaint,
+  getMyComplaints,
+  getComplaintById,
+  assignComplaint,
+} from "./controller.js";
 
 console.log("Complaint routes loaded");
 
@@ -15,4 +20,5 @@ router.post("/", authenticate, createComplaint);
 router.get("/my", authenticate, getMyComplaints);
 
 router.get("/:id", authenticate, getComplaintById);
+router.patch("/:id/assign", authenticate, assignComplaint);
 export default router;

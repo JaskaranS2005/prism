@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 
 import { ApiResponse } from "../../utils/ResponseWrapper.js";
-
+import { assignComplaintSchema } from "./validation.js";
+import { assignComplaintService } from "./service.js";
 import {
   createComplaintService,
   getComplaintByIdService,
@@ -51,6 +52,24 @@ export async function getComplaintById(
     return res
       .status(200)
       .json(new ApiResponse(true, "Complaint fetched successfully.", complaint));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function assignComplaint(
+  req: Request<ComplaintParams>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const data = assignComplaintSchema.parse(req.body);
+
+    const complaint = await assignComplaintService(req.params.id, data);
+
+    return res
+      .status(200)
+      .json(new ApiResponse(true, "Complaint assigned successfully.", complaint));
   } catch (error) {
     next(error);
   }

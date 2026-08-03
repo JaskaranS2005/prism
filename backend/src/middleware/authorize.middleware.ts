@@ -8,7 +8,7 @@ export function authorize(...allowedRoles: RoleType[]) {
       return next(new ApiError(401, "Authentication required."));
     }
 
-    const userRole = req.user.role.name;
+    const userRole = req.user.role;
 
     if (!allowedRoles.includes(userRole)) {
       return next(new ApiError(403, "Access denied."));

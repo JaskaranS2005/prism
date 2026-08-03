@@ -4,6 +4,7 @@ import { authenticate } from "../../middleware/auth.middleware.js";
 import { login, me, register } from "./controller.js";
 import { authorize } from "../../middleware/authorize.middleware.js";
 import { RoleType } from "@prisma/client";
+console.log("Auth routes loaded");
 const router = Router();
 
 router.post("/register", register);

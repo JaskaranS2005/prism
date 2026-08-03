@@ -25,7 +25,10 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
       throw new ApiError(403, "Account is deactivated.");
     }
 
-    req.user = user;
+    req.user = {
+      id: user.id,
+      role: user.role.name,
+    };
 
     next();
   } catch (error) {
