@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 enum RoleType {
@@ -24,6 +25,8 @@ enum ComplaintStatus {
   RESOLVED
   REJECTED
   CLOSED
+  DISPUTED
+  REOPENED
 }
 
 enum ComplaintPriority {
@@ -61,8 +64,9 @@ model User {
   roleId String
   role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
-  complaintsCreated  Complaint[] @relation("ComplaintCreator")
-  complaintsAssigned Complaint[] @relation("ComplaintAssignee")
+  complaintsCreated  Complaint[]              @relation("ComplaintCreator")
+  complaintsAssigned Complaint[]              @relation("ComplaintAssignee")
+  statusHistory      ComplaintStatusHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -100,11 +104,36 @@ model Complaint {
   departmentId String
   department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  statusHistory ComplaintStatusHistory[]
 
   @@index([createdById])
   @@index([departmentId])
   @@index([assignedOfficerId])
   @@index([status])
+}
+
+model ComplaintStatusHistory {
+  id String @id @default(uuid())
+
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  status ComplaintStatus
+
+  changedById String
+  changedBy   User   @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  reason         String?
+  resolutionNote String?
+
+  cycleNumber Int @default(1)
+
+  createdAt DateTime @default(now())
+
+  @@index([complaintId])
+  @@index([changedById])
+  @@index([status])
+  @@index([complaintId, cycleNumber])
 }

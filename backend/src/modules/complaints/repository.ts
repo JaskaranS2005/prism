@@ -107,3 +107,23 @@ export async function findComplaintByIdWithRelations(complaintId: string) {
     },
   });
 }
+export async function updateComplaintStatus(complaintId: string, status: ComplaintStatus) {
+  return prisma.complaint.update({
+    where: {
+      id: complaintId,
+    },
+    data: {
+      status,
+    },
+    include: {
+      department: true,
+      assignedOfficer: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+        },
+      },
+    },
+  });
+}
