@@ -3,30 +3,43 @@ import { prisma } from "../../lib/prisma.js";
 import { CreateComplaintInput } from "./types.js";
 
 export async function createComplaint(userId: string, data: CreateComplaintInput) {
-  return prisma.complaint.create({
-    data: {
-      title: data.title,
-      description: data.description,
+  return prisma.$transaction(async (tx) => {
+    const complaint = await tx.complaint.create({
+      data: {
+        title: data.title,
+        description: data.description,
 
-      status: ComplaintStatus.PENDING,
-      priority: ComplaintPriority.MEDIUM,
+        status: ComplaintStatus.PENDING,
+        priority: ComplaintPriority.MEDIUM,
 
-      createdById: userId,
-      departmentId: data.departmentId,
-    },
-    include: {
-      department: true,
-      createdBy: {
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
+        createdById: userId,
+        departmentId: data.departmentId,
+      },
+      include: {
+        department: true,
+        createdBy: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
         },
       },
-    },
+    });
+
+    await tx.complaintStatusHistory.create({
+      data: {
+        complaintId: complaint.id,
+        status: ComplaintStatus.PENDING,
+        changedById: userId,
+        cycleNumber: 1,
+        reason: "Complaint created.",
+      },
+    });
+
+    return complaint;
   });
 }
-
 export async function findDepartmentById(departmentId: string) {
   return prisma.department.findUnique({
     where: {
