@@ -1,15 +1,18 @@
 import { Request, Response, NextFunction } from "express";
 
 import { ApiResponse } from "../../utils/ResponseWrapper.js";
-import { assignComplaintSchema } from "./validation.js";
+import {
+  assignComplaintSchema,
+  createComplaintSchema,
+  updateComplaintStatusSchema,
+} from "./validation.js";
 import { assignComplaintService } from "./service.js";
 import {
   createComplaintService,
   getComplaintByIdService,
   getMyComplaintsService,
+  updateComplaintStatusService,
 } from "./service.js";
-
-import { createComplaintSchema } from "./validation.js";
 
 type ComplaintParams = {
   id: string;
@@ -70,6 +73,23 @@ export async function assignComplaint(
     return res
       .status(200)
       .json(new ApiResponse(true, "Complaint assigned successfully.", complaint));
+  } catch (error) {
+    next(error);
+  }
+}
+export async function updateComplaintStatus(
+  req: Request<ComplaintParams>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const data = updateComplaintStatusSchema.parse(req.body);
+
+    const complaint = await updateComplaintStatusService(req.params.id, req.user!.id, data);
+
+    return res
+      .status(200)
+      .json(new ApiResponse(true, "Complaint status updated successfully.", complaint));
   } catch (error) {
     next(error);
   }

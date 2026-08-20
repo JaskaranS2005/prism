@@ -12,5 +12,5 @@ export const assignComplaintSchema = z.object({
   officerId: z.uuid(),
 });
 export const updateComplaintStatusSchema = z.object({
-  status: z.enum(["PENDING", "UNDER_REVIEW", "IN_PROGRESS", "RESOLVED", "REJECTED", "CLOSED"]),
+  status: z.enum(["UNDER_REVIEW", "IN_PROGRESS", "RESOLVED"]),
 });

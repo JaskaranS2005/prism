@@ -11,7 +11,7 @@ import {
 } from "./repository.js";
 
 import { AssignComplaintInput, CreateComplaintInput, UpdateComplaintStatusInput } from "./types.js";
-
+import { ComplaintStatus } from "@prisma/client";
 export async function createComplaintService(userId: string, data: CreateComplaintInput) {
   const department = await findDepartmentById(data.departmentId);
 
@@ -64,6 +64,11 @@ export async function assignComplaintService(complaintId: string, data: AssignCo
   return assignComplaint(complaintId, data.officerId);
 }
 
+const allowedTransitions: Partial<Record<ComplaintStatus, ComplaintStatus[]>> = {
+  PENDING: [ComplaintStatus.UNDER_REVIEW],
+  UNDER_REVIEW: [ComplaintStatus.IN_PROGRESS],
+  IN_PROGRESS: [ComplaintStatus.RESOLVED],
+};
 export async function updateComplaintStatusService(
   complaintId: string,
   userId: string,
@@ -83,7 +88,11 @@ export async function updateComplaintStatusService(
     throw new ApiError(403, "Only the assigned officer can update the complaint status.");
   }
 
-  // Status transition rules will go here.
+  const allowedNextStatuses = allowedTransitions[complaint.status];
+
+  if (!allowedNextStatuses?.includes(data.status)) {
+    throw new ApiError(400, `Invalid status transition: ${complaint.status} → ${data.status}`);
+  }
 
   return updateComplaintStatus(complaintId, data.status);
 }
