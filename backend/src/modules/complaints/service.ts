@@ -94,5 +94,5 @@ export async function updateComplaintStatusService(
     throw new ApiError(400, `Invalid status transition: ${complaint.status} → ${data.status}`);
   }
 
-  return updateComplaintStatus(complaintId, data.status);
+  return updateComplaintStatus(complaintId, data.status, userId);
 }
