@@ -3,14 +3,23 @@ import ApiError from "../../utils/ApiError.js";
 import {
   assignComplaint,
   createComplaint,
+  disputeComplaint,
+  reopenComplaint,
   findComplaintById,
   findComplaintsByUserId,
   findDepartmentById,
   findUserById,
   updateComplaintStatus,
+  getComplaintStatusHistory,
 } from "./repository.js";
+import {
+  AssignComplaintInput,
+  CreateComplaintInput,
+  DisputeComplaintInput,
+  UpdateComplaintStatusInput,
+  ReopenComplaintInput,
+} from "./types.js";
 
-import { AssignComplaintInput, CreateComplaintInput, UpdateComplaintStatusInput } from "./types.js";
 import { ComplaintStatus } from "@prisma/client";
 export async function createComplaintService(userId: string, data: CreateComplaintInput) {
   const department = await findDepartmentById(data.departmentId);
@@ -66,6 +75,7 @@ export async function assignComplaintService(complaintId: string, data: AssignCo
 
 const allowedTransitions: Partial<Record<ComplaintStatus, ComplaintStatus[]>> = {
   PENDING: [ComplaintStatus.UNDER_REVIEW],
+  REOPENED: [ComplaintStatus.UNDER_REVIEW],
   UNDER_REVIEW: [ComplaintStatus.IN_PROGRESS],
   IN_PROGRESS: [ComplaintStatus.RESOLVED],
 };
@@ -94,5 +104,64 @@ export async function updateComplaintStatusService(
     throw new ApiError(400, `Invalid status transition: ${complaint.status} → ${data.status}`);
   }
 
-  return updateComplaintStatus(complaintId, data.status, userId);
+  return updateComplaintStatus(complaintId, data.status, userId, data.resolutionNote);
+}
+export async function disputeComplaintService(
+  complaintId: string,
+  userId: string,
+  data: DisputeComplaintInput
+) {
+  const complaint = await findComplaintById(complaintId);
+
+  if (!complaint) {
+    throw new ApiError(404, "Complaint not found.");
+  }
+
+  if (complaint.createdById !== userId) {
+    throw new ApiError(403, "Only the citizen who created the complaint can dispute it.");
+  }
+
+  if (complaint.status !== ComplaintStatus.RESOLVED) {
+    throw new ApiError(400, "Only a resolved complaint can be disputed.");
+  }
+
+  return disputeComplaint(complaintId, userId, data.reason);
+}
+export async function reopenComplaintService(
+  complaintId: string,
+  userId: string,
+  data: ReopenComplaintInput
+) {
+  const complaint = await findComplaintById(complaintId);
+
+  if (!complaint) {
+    throw new ApiError(404, "Complaint not found.");
+  }
+
+  if (!complaint.assignedOfficerId) {
+    throw new ApiError(400, "Complaint has no assigned officer.");
+  }
+
+  if (complaint.assignedOfficerId !== userId) {
+    throw new ApiError(403, "Only the assigned officer can reopen the complaint.");
+  }
+
+  if (complaint.status !== ComplaintStatus.DISPUTED) {
+    throw new ApiError(400, "Only a disputed complaint can be reopened.");
+  }
+
+  return reopenComplaint(complaintId, userId, data.reason);
+}
+export async function getComplaintStatusHistoryService(complaintId: string, userId: string) {
+  const complaint = await findComplaintById(complaintId);
+
+  if (!complaint) {
+    throw new ApiError(404, "Complaint not found.");
+  }
+
+  if (complaint.createdById !== userId && complaint.assignedOfficerId !== userId) {
+    throw new ApiError(403, "You are not authorized to view this complaint history.");
+  }
+
+  return getComplaintStatusHistory(complaintId);
 }

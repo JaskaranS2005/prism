@@ -7,6 +7,9 @@ import {
   getComplaintById,
   updateComplaintStatus,
   assignComplaint,
+  disputeComplaint,
+  reopenComplaint,
+  getComplaintStatusHistory,
 } from "./controller.js";
 console.log("Complaint routes loaded");
 
@@ -23,4 +26,7 @@ router.get("/my", authenticate, getMyComplaints);
 router.get("/:id", authenticate, getComplaintById);
 router.patch("/:id/assign", authenticate, assignComplaint);
 router.patch("/:id/status", authenticate, updateComplaintStatus);
+router.post("/:id/dispute", authenticate, disputeComplaint);
+router.patch("/:id/reopen", authenticate, reopenComplaint);
+router.get("/:complaintId/history", authenticate, getComplaintStatusHistory);
 export default router;

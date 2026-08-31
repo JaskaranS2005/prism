@@ -120,10 +120,12 @@ export async function findComplaintByIdWithRelations(complaintId: string) {
     },
   });
 }
+
 export async function updateComplaintStatus(
   complaintId: string,
   status: ComplaintStatus,
-  userId: string
+  changedById: string,
+  resolutionNote?: string
 ) {
   return prisma.$transaction(async (tx) => {
     const latestHistory = await tx.complaintStatusHistory.findFirst({
@@ -135,9 +137,7 @@ export async function updateComplaintStatus(
       },
     });
 
-    if (!latestHistory) {
-      throw new Error("Complaint status history not found.");
-    }
+    const cycleNumber = latestHistory?.cycleNumber ?? 1;
 
     const complaint = await tx.complaint.update({
       where: {
@@ -145,6 +145,9 @@ export async function updateComplaintStatus(
       },
       data: {
         status,
+        ...(status === ComplaintStatus.RESOLVED && {
+          resolvedAt: new Date(),
+        }),
       },
       include: {
         department: true,
@@ -162,12 +165,140 @@ export async function updateComplaintStatus(
       data: {
         complaintId,
         status,
-        changedById: userId,
-        cycleNumber: latestHistory.cycleNumber,
-        reason: `Status changed to ${status}.`,
+        changedById,
+        resolutionNote: status === ComplaintStatus.RESOLVED ? resolutionNote : undefined,
+        cycleNumber,
       },
     });
 
     return complaint;
+  });
+}
+
+export async function disputeComplaint(complaintId: string, userId: string, reason: string) {
+  return prisma.$transaction(async (tx) => {
+    const complaint = await tx.complaint.findUnique({
+      where: {
+        id: complaintId,
+      },
+    });
+
+    if (!complaint) {
+      throw new Error("Complaint not found.");
+    }
+
+    const latestHistory = await tx.complaintStatusHistory.findFirst({
+      where: {
+        complaintId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (!latestHistory) {
+      throw new Error("Complaint status history not found.");
+    }
+
+    const updatedComplaint = await tx.complaint.update({
+      where: {
+        id: complaintId,
+      },
+      data: {
+        status: ComplaintStatus.DISPUTED,
+      },
+      include: {
+        department: true,
+        assignedOfficer: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    await tx.complaintStatusHistory.create({
+      data: {
+        complaintId,
+        status: ComplaintStatus.DISPUTED,
+        changedById: userId,
+        cycleNumber: latestHistory.cycleNumber,
+        reason,
+      },
+    });
+
+    return updatedComplaint;
+  });
+}
+export async function reopenComplaint(complaintId: string, userId: string, reason: string) {
+  return prisma.$transaction(async (tx) => {
+    const complaint = await tx.complaint.findUnique({
+      where: {
+        id: complaintId,
+      },
+    });
+
+    if (!complaint) {
+      throw new Error("Complaint not found.");
+    }
+
+    const latestHistory = await tx.complaintStatusHistory.findFirst({
+      where: {
+        complaintId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (!latestHistory) {
+      throw new Error("Complaint status history not found.");
+    }
+
+    const newCycleNumber = latestHistory.cycleNumber + 1;
+
+    const updatedComplaint = await tx.complaint.update({
+      where: {
+        id: complaintId,
+      },
+      data: {
+        status: ComplaintStatus.REOPENED,
+      },
+      include: {
+        department: true,
+        assignedOfficer: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    await tx.complaintStatusHistory.create({
+      data: {
+        complaintId,
+        status: ComplaintStatus.REOPENED,
+        changedById: userId,
+        cycleNumber: newCycleNumber,
+        reason,
+      },
+    });
+
+    return updatedComplaint;
+  });
+}
+
+export async function getComplaintStatusHistory(complaintId: string) {
+  return prisma.complaintStatusHistory.findMany({
+    where: {
+      complaintId,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
   });
 }

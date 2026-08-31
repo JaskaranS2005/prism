@@ -104,6 +104,9 @@ model Complaint {
   departmentId String
   department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
 
+  resolvedAt DateTime?
+  closedAt   DateTime?
+
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
   statusHistory ComplaintStatusHistory[]

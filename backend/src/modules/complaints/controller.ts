@@ -1,18 +1,21 @@
 import { Request, Response, NextFunction } from "express";
-
 import { ApiResponse } from "../../utils/ResponseWrapper.js";
 import {
   assignComplaintSchema,
   createComplaintSchema,
   updateComplaintStatusSchema,
 } from "./validation.js";
-import { assignComplaintService } from "./service.js";
+import { assignComplaintService, getComplaintStatusHistoryService } from "./service.js";
 import {
   createComplaintService,
   getComplaintByIdService,
   getMyComplaintsService,
   updateComplaintStatusService,
 } from "./service.js";
+import { disputeComplaintService } from "./service.js";
+import { disputeComplaintSchema } from "./validation.js";
+import { reopenComplaintService } from "./service.js";
+import { reopenComplaintSchema } from "./validation.js";
 
 type ComplaintParams = {
   id: string;
@@ -90,6 +93,62 @@ export async function updateComplaintStatus(
     return res
       .status(200)
       .json(new ApiResponse(true, "Complaint status updated successfully.", complaint));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function disputeComplaint(
+  req: Request<ComplaintParams>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const data = disputeComplaintSchema.parse(req.body);
+
+    const complaint = await disputeComplaintService(req.params.id, req.user!.id, data);
+
+    return res
+      .status(200)
+      .json(new ApiResponse(true, "Complaint disputed successfully.", complaint));
+  } catch (error) {
+    next(error);
+  }
+}
+export async function reopenComplaint(
+  req: Request<ComplaintParams>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const data = reopenComplaintSchema.parse(req.body);
+
+    const complaint = await reopenComplaintService(req.params.id, req.user!.id, data);
+
+    return res
+      .status(200)
+      .json(new ApiResponse(true, "Complaint reopened successfully.", complaint));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getComplaintStatusHistory(
+  req: Request<{ complaintId: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const complaintId = req.params.complaintId;
+    const userId = req.user!.id;
+
+    const history = await getComplaintStatusHistoryService(complaintId, userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Complaint status history fetched successfully.",
+      data: history,
+    });
   } catch (error) {
     next(error);
   }
