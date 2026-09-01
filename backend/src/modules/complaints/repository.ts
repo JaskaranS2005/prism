@@ -291,6 +291,51 @@ export async function reopenComplaint(complaintId: string, userId: string, reaso
     return updatedComplaint;
   });
 }
+export async function closeComplaint(complaintId: string, userId: string) {
+  return prisma.$transaction(async (tx) => {
+    const latestHistory = await tx.complaintStatusHistory.findFirst({
+      where: {
+        complaintId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    const cycleNumber = latestHistory?.cycleNumber ?? 1;
+
+    const complaint = await tx.complaint.update({
+      where: {
+        id: complaintId,
+      },
+      data: {
+        status: "CLOSED",
+        closedAt: new Date(),
+      },
+      include: {
+        department: true,
+        assignedOfficer: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    await tx.complaintStatusHistory.create({
+      data: {
+        complaintId,
+        status: "CLOSED",
+        changedById: userId,
+        cycleNumber,
+      },
+    });
+
+    return complaint;
+  });
+}
 
 export async function getComplaintStatusHistory(complaintId: string) {
   return prisma.complaintStatusHistory.findMany({

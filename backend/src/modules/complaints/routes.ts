@@ -10,6 +10,7 @@ import {
   disputeComplaint,
   reopenComplaint,
   getComplaintStatusHistory,
+  closeComplaint,
 } from "./controller.js";
 console.log("Complaint routes loaded");
 
@@ -28,5 +29,6 @@ router.patch("/:id/assign", authenticate, assignComplaint);
 router.patch("/:id/status", authenticate, updateComplaintStatus);
 router.post("/:id/dispute", authenticate, disputeComplaint);
 router.patch("/:id/reopen", authenticate, reopenComplaint);
+router.patch("/:complaintId/close", authenticate, closeComplaint);
 router.get("/:complaintId/history", authenticate, getComplaintStatusHistory);
 export default router;

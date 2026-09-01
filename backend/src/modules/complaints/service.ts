@@ -9,6 +9,7 @@ import {
   findComplaintsByUserId,
   findDepartmentById,
   findUserById,
+  closeComplaint,
   updateComplaintStatus,
   getComplaintStatusHistory,
 } from "./repository.js";
@@ -78,6 +79,7 @@ const allowedTransitions: Partial<Record<ComplaintStatus, ComplaintStatus[]>> = 
   REOPENED: [ComplaintStatus.UNDER_REVIEW],
   UNDER_REVIEW: [ComplaintStatus.IN_PROGRESS],
   IN_PROGRESS: [ComplaintStatus.RESOLVED],
+  RESOLVED: [ComplaintStatus.CLOSED],
 };
 export async function updateComplaintStatusService(
   complaintId: string,
@@ -152,6 +154,37 @@ export async function reopenComplaintService(
 
   return reopenComplaint(complaintId, userId, data.reason);
 }
+export async function closeComplaintService(complaintId: string, userId: string) {
+  const complaint = await findComplaintById(complaintId);
+
+  if (!complaint) {
+    throw new ApiError(404, "Complaint not found.");
+  }
+
+  if (complaint.status !== ComplaintStatus.RESOLVED) {
+    throw new ApiError(400, "Only a resolved complaint can be closed.");
+  }
+
+  const user = await findUserById(userId);
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  const allowedRoles = [
+    "SUPER_ADMIN",
+    "STATE_ADMIN",
+    "DISTRICT_ADMIN",
+    "MUNICIPAL_ADMIN",
+    "DEPARTMENT_HEAD",
+  ];
+
+  if (!allowedRoles.includes(user.role.name)) {
+    throw new ApiError(403, "Only authorized administrators can close a complaint.");
+  }
+
+  return closeComplaint(complaintId, userId);
+}
 export async function getComplaintStatusHistoryService(complaintId: string, userId: string) {
   const complaint = await findComplaintById(complaintId);
 
@@ -159,7 +192,25 @@ export async function getComplaintStatusHistoryService(complaintId: string, user
     throw new ApiError(404, "Complaint not found.");
   }
 
-  if (complaint.createdById !== userId && complaint.assignedOfficerId !== userId) {
+  const user = await findUserById(userId);
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  const allowedAdminRoles = [
+    "SUPER_ADMIN",
+    "STATE_ADMIN",
+    "DISTRICT_ADMIN",
+    "MUNICIPAL_ADMIN",
+    "DEPARTMENT_HEAD",
+  ];
+
+  const isAdmin = allowedAdminRoles.includes(user.role.name);
+  const isCitizen = complaint.createdById === userId;
+  const isAssignedOfficer = complaint.assignedOfficerId === userId;
+
+  if (!isCitizen && !isAssignedOfficer && !isAdmin) {
     throw new ApiError(403, "You are not authorized to view this complaint history.");
   }
 

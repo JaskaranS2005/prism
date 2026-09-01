@@ -11,6 +11,7 @@ import {
   getComplaintByIdService,
   getMyComplaintsService,
   updateComplaintStatusService,
+  closeComplaintService,
 } from "./service.js";
 import { disputeComplaintService } from "./service.js";
 import { disputeComplaintSchema } from "./validation.js";
@@ -128,6 +129,27 @@ export async function reopenComplaint(
     return res
       .status(200)
       .json(new ApiResponse(true, "Complaint reopened successfully.", complaint));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function closeComplaint(
+  req: Request<{ complaintId: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const complaintId = req.params.complaintId;
+    const userId = req.user!.id;
+
+    const complaint = await closeComplaintService(complaintId, userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Complaint closed successfully.",
+      data: complaint,
+    });
   } catch (error) {
     next(error);
   }
