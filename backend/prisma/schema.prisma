@@ -74,16 +74,68 @@ model User {
   @@index([roleId])
 }
 
+model State {
+  id       String  @id @default(uuid())
+  name     String  @unique
+  code     String  @unique
+  isActive Boolean @default(true)
+
+  districts District[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model District {
+  id       String  @id @default(uuid())
+  name     String
+  isActive Boolean @default(true)
+
+  stateId String
+  state   State  @relation(fields: [stateId], references: [id], onDelete: Restrict)
+
+  municipalities Municipality[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([stateId, name])
+  @@index([stateId])
+}
+
+model Municipality {
+  id       String  @id @default(uuid())
+  name     String
+  isActive Boolean @default(true)
+
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  departments Department[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([districtId, name])
+  @@index([districtId])
+}
+
 model Department {
   id          String  @id @default(uuid())
-  name        String  @unique
+  name        String
   description String?
   isActive    Boolean @default(true)
+
+  municipalityId String?
+  municipality   Municipality? @relation(fields: [municipalityId], references: [id])
 
   complaints Complaint[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([municipalityId, name])
+  @@index([municipalityId])
 }
 
 model Complaint {
