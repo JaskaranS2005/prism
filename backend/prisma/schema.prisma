@@ -68,10 +68,39 @@ model User {
   complaintsAssigned Complaint[]              @relation("ComplaintAssignee")
   statusHistory      ComplaintStatusHistory[]
 
+  administrativeAssignment AdministrativeAssignment?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([roleId])
+}
+
+model AdministrativeAssignment {
+  id String @id @default(uuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stateId String?
+  state   State?  @relation(fields: [stateId], references: [id], onDelete: Restrict)
+
+  districtId String?
+  district   District? @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  municipalityId String?
+  municipality   Municipality? @relation(fields: [municipalityId], references: [id], onDelete: Restrict)
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stateId])
+  @@index([districtId])
+  @@index([municipalityId])
+  @@index([departmentId])
 }
 
 model State {
@@ -81,6 +110,8 @@ model State {
   isActive Boolean @default(true)
 
   districts District[]
+
+  administrativeAssignments AdministrativeAssignment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -95,6 +126,8 @@ model District {
   state   State  @relation(fields: [stateId], references: [id], onDelete: Restrict)
 
   municipalities Municipality[]
+
+  administrativeAssignments AdministrativeAssignment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -113,6 +146,8 @@ model Municipality {
 
   departments Department[]
 
+  administrativeAssignments AdministrativeAssignment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -130,6 +165,8 @@ model Department {
   municipality   Municipality? @relation(fields: [municipalityId], references: [id])
 
   complaints Complaint[]
+
+  administrativeAssignments AdministrativeAssignment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

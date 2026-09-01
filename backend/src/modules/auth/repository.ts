@@ -47,9 +47,19 @@ export async function findUserById(id: string) {
       phone: true,
       isActive: true,
       isVerified: true,
+
       role: {
         select: {
           name: true,
+        },
+      },
+
+      administrativeAssignment: {
+        select: {
+          stateId: true,
+          districtId: true,
+          municipalityId: true,
+          departmentId: true,
         },
       },
     },
@@ -75,11 +85,13 @@ export async function createUser(
       fullName: true,
       email: true,
       phone: true,
+
       role: {
         select: {
           name: true,
         },
       },
+
       createdAt: true,
     },
   });
