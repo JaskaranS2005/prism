@@ -1,5 +1,5 @@
 import "express";
-import { RoleType } from "@prisma/client";
+import type { RoleType } from "@prisma/client";
 
 declare global {
   namespace Express {
@@ -7,6 +7,12 @@ declare global {
       user?: {
         id: string;
         role: RoleType;
+        administrativeScope?: {
+          stateId?: string;
+          districtId?: string;
+          municipalityId?: string;
+          departmentId?: string;
+        };
       };
     }
   }
