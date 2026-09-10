@@ -72,7 +72,7 @@ export async function assignComplaint(
   try {
     const data = assignComplaintSchema.parse(req.body);
 
-    const complaint = await assignComplaintService(req.params.id, data);
+    const complaint = await assignComplaintService(req.params.id, req.user!.id, data);
 
     return res
       .status(200)

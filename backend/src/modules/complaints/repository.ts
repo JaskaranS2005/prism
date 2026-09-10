@@ -67,22 +67,35 @@ export async function findComplaintsByUserId(userId: string) {
     },
   });
 }
+
 export async function findComplaintById(id: string) {
   return prisma.complaint.findUnique({
     where: { id },
     include: {
-      department: true,
+      department: {
+        include: {
+          municipality: {
+            include: {
+              district: {
+                include: {
+                  state: true,
+                },
+              },
+            },
+          },
+        },
+      },
       assignedOfficer: true,
     },
   });
 }
+
 export async function findUserById(userId: string) {
   return prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
+    where: { id: userId },
     include: {
       role: true,
+      administrativeAssignment: true,
     },
   });
 }

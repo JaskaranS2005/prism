@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../../middleware/auth.middleware.js";
-
+import { RoleType } from "@prisma/client";
+import { authorize } from "../../middleware/authorize.middleware.js";
 import {
   createComplaint,
   getMyComplaints,
@@ -25,7 +26,18 @@ router.post("/", authenticate, createComplaint);
 router.get("/my", authenticate, getMyComplaints);
 
 router.get("/:id", authenticate, getComplaintById);
-router.patch("/:id/assign", authenticate, assignComplaint);
+router.patch(
+  "/:id/assign",
+  authenticate,
+  authorize(
+    RoleType.SUPER_ADMIN,
+    RoleType.STATE_ADMIN,
+    RoleType.DISTRICT_ADMIN,
+    RoleType.MUNICIPAL_ADMIN,
+    RoleType.DEPARTMENT_HEAD
+  ),
+  assignComplaint
+);
 router.patch("/:id/status", authenticate, updateComplaintStatus);
 router.post("/:id/dispute", authenticate, disputeComplaint);
 router.patch("/:id/reopen", authenticate, reopenComplaint);

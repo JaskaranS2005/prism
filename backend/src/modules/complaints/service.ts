@@ -1,5 +1,5 @@
 import ApiError from "../../utils/ApiError.js";
-
+import { hasScopeAccess } from "../administration/scope.js";
 import {
   assignComplaint,
   createComplaint,
@@ -20,8 +20,8 @@ import {
   UpdateComplaintStatusInput,
   ReopenComplaintInput,
 } from "./types.js";
+import { ComplaintStatus, RoleType } from "@prisma/client";
 
-import { ComplaintStatus } from "@prisma/client";
 export async function createComplaintService(userId: string, data: CreateComplaintInput) {
   const department = await findDepartmentById(data.departmentId);
 
@@ -53,12 +53,33 @@ export async function getComplaintByIdService(complaintId: string, userId: strin
 
   return complaint;
 }
-
-export async function assignComplaintService(complaintId: string, data: AssignComplaintInput) {
+export async function assignComplaintService(
+  complaintId: string,
+  userId: string,
+  data: AssignComplaintInput
+) {
   const complaint = await findComplaintById(complaintId);
 
   if (!complaint) {
     throw new ApiError(404, "Complaint not found.");
+  }
+
+  const user = await findUserById(userId);
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  const allowedRoles: RoleType[] = [
+    RoleType.SUPER_ADMIN,
+    RoleType.STATE_ADMIN,
+    RoleType.DISTRICT_ADMIN,
+    RoleType.MUNICIPAL_ADMIN,
+    RoleType.DEPARTMENT_HEAD,
+  ];
+
+  if (!allowedRoles.includes(user.role.name)) {
+    throw new ApiError(403, "Only authorized administrators can assign complaints.");
   }
 
   const officer = await findUserById(data.officerId);
@@ -67,8 +88,51 @@ export async function assignComplaintService(complaintId: string, data: AssignCo
     throw new ApiError(404, "Officer not found.");
   }
 
-  if (officer.role.name !== "OFFICER") {
+  if (officer.role.name !== RoleType.OFFICER) {
     throw new ApiError(400, "Selected user is not an officer.");
+  }
+
+  const complaintScope = {
+    stateId: complaint.department.municipality?.district.state.id,
+    districtId: complaint.department.municipality?.districtId,
+    municipalityId: complaint.department.municipalityId ?? undefined,
+    departmentId: complaint.departmentId,
+  };
+
+  const userScope = user.administrativeAssignment
+    ? {
+        stateId: user.administrativeAssignment.stateId ?? undefined,
+        districtId: user.administrativeAssignment.districtId ?? undefined,
+        municipalityId: user.administrativeAssignment.municipalityId ?? undefined,
+        departmentId: user.administrativeAssignment.departmentId ?? undefined,
+      }
+    : undefined;
+
+  if (!hasScopeAccess(user.role.name, userScope, complaintScope)) {
+    throw new ApiError(
+      403,
+      "You are not authorized to assign complaints outside your administrative scope."
+    );
+  }
+
+  const officerScope = officer.administrativeAssignment
+    ? {
+        stateId: officer.administrativeAssignment.stateId ?? undefined,
+        districtId: officer.administrativeAssignment.districtId ?? undefined,
+        municipalityId: officer.administrativeAssignment.municipalityId ?? undefined,
+        departmentId: officer.administrativeAssignment.departmentId ?? undefined,
+      }
+    : undefined;
+
+  if (!officerScope) {
+    throw new ApiError(400, "Officer does not have an administrative assignment.");
+  }
+
+  if (!hasScopeAccess(user.role.name, userScope, officerScope)) {
+    throw new ApiError(
+      403,
+      "You cannot assign a complaint to an officer outside your administrative scope."
+    );
   }
 
   return assignComplaint(complaintId, data.officerId);
@@ -154,6 +218,7 @@ export async function reopenComplaintService(
 
   return reopenComplaint(complaintId, userId, data.reason);
 }
+
 export async function closeComplaintService(complaintId: string, userId: string) {
   const complaint = await findComplaintById(complaintId);
 
@@ -171,20 +236,44 @@ export async function closeComplaintService(complaintId: string, userId: string)
     throw new ApiError(404, "User not found.");
   }
 
-  const allowedRoles = [
-    "SUPER_ADMIN",
-    "STATE_ADMIN",
-    "DISTRICT_ADMIN",
-    "MUNICIPAL_ADMIN",
-    "DEPARTMENT_HEAD",
+  const allowedRoles: RoleType[] = [
+    RoleType.SUPER_ADMIN,
+    RoleType.STATE_ADMIN,
+    RoleType.DISTRICT_ADMIN,
+    RoleType.MUNICIPAL_ADMIN,
+    RoleType.DEPARTMENT_HEAD,
   ];
 
   if (!allowedRoles.includes(user.role.name)) {
     throw new ApiError(403, "Only authorized administrators can close a complaint.");
   }
 
+  const resourceScope = {
+    stateId: complaint.department.municipality?.district.state.id,
+    districtId: complaint.department.municipality?.districtId,
+    municipalityId: complaint.department.municipalityId ?? undefined,
+    departmentId: complaint.departmentId,
+  };
+
+  const userScope = user.administrativeAssignment
+    ? {
+        stateId: user.administrativeAssignment.stateId ?? undefined,
+        districtId: user.administrativeAssignment.districtId ?? undefined,
+        municipalityId: user.administrativeAssignment.municipalityId ?? undefined,
+        departmentId: user.administrativeAssignment.departmentId ?? undefined,
+      }
+    : undefined;
+
+  if (!hasScopeAccess(user.role.name, userScope, resourceScope)) {
+    throw new ApiError(
+      403,
+      "You are not authorized to close a complaint outside your administrative scope."
+    );
+  }
+
   return closeComplaint(complaintId, userId);
 }
+
 export async function getComplaintStatusHistoryService(complaintId: string, userId: string) {
   const complaint = await findComplaintById(complaintId);
 
@@ -198,20 +287,47 @@ export async function getComplaintStatusHistoryService(complaintId: string, user
     throw new ApiError(404, "User not found.");
   }
 
-  const allowedAdminRoles = [
-    "SUPER_ADMIN",
-    "STATE_ADMIN",
-    "DISTRICT_ADMIN",
-    "MUNICIPAL_ADMIN",
-    "DEPARTMENT_HEAD",
+  const allowedAdminRoles: RoleType[] = [
+    RoleType.SUPER_ADMIN,
+    RoleType.STATE_ADMIN,
+    RoleType.DISTRICT_ADMIN,
+    RoleType.MUNICIPAL_ADMIN,
+    RoleType.DEPARTMENT_HEAD,
   ];
 
-  const isAdmin = allowedAdminRoles.includes(user.role.name);
   const isCitizen = complaint.createdById === userId;
   const isAssignedOfficer = complaint.assignedOfficerId === userId;
+  const isAdmin = allowedAdminRoles.includes(user.role.name);
 
-  if (!isCitizen && !isAssignedOfficer && !isAdmin) {
+  if (isCitizen || isAssignedOfficer) {
+    return getComplaintStatusHistory(complaintId);
+  }
+
+  if (!isAdmin) {
     throw new ApiError(403, "You are not authorized to view this complaint history.");
+  }
+
+  const resourceScope = {
+    stateId: complaint.department.municipality?.district.state.id,
+    districtId: complaint.department.municipality?.districtId,
+    municipalityId: complaint.department.municipalityId ?? undefined,
+    departmentId: complaint.departmentId,
+  };
+
+  const userScope = user.administrativeAssignment
+    ? {
+        stateId: user.administrativeAssignment.stateId ?? undefined,
+        districtId: user.administrativeAssignment.districtId ?? undefined,
+        municipalityId: user.administrativeAssignment.municipalityId ?? undefined,
+        departmentId: user.administrativeAssignment.departmentId ?? undefined,
+      }
+    : undefined;
+
+  if (!hasScopeAccess(user.role.name, userScope, resourceScope)) {
+    throw new ApiError(
+      403,
+      "You are not authorized to view this complaint history outside your administrative scope."
+    );
   }
 
   return getComplaintStatusHistory(complaintId);
